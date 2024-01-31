@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"image"
 	"log"
 	"math/rand"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -33,15 +36,15 @@ func main() {
 	const (
 		epochs              = 2000
 		printEveryNthEpochs = 100
-		learningRateW       = 0.5e-3
+		learningRateW       = 0.5e-4
 		learningRateB       = 0.7
 
 		plotLoss = false // Loss curve: true, Resulting line: false.
 
-		inputPoints                      = 25
-		inputPointsMinX, inputPointsMaxX = 5, 20
-		inputPointsRandY                 = 1 // Makes sure Ys aren't on the line, but around it. Randomly.
-		startValueRange                  = 1 // Start values for weights are in range [-startValueRange, startValueRange].
+		//inputPoints                      = 25
+		inputPointsMinX, inputPointsMaxX = 0, 150
+		//inputPointsRandY                 = 1 // Makes sure Ys aren't on the line, but around it. Randomly.
+		startValueRange = 1 // Start values for weights are in range [-startValueRange, startValueRange].
 
 	)
 
@@ -49,12 +52,36 @@ func main() {
 		inputs, labels []float64
 		xys            plotter.XYs
 	)
-	f := func(x float64) float64 { return 17*x - 1.75 }
-	for i := 0; i < inputPoints; i++ {
-		inputs = append(inputs, inputPointsMinX+(inputPointsMaxX-inputPointsMinX)*rand.Float64())
-		labels = append(labels, f(inputs[i])+inputPointsRandY*(1-rand.Float64()*2))
-		xys = append(xys, plotter.XY{X: inputs[i], Y: labels[i]})
+	//https://dev.to/moiz697/how-to-read-and-visualize-csv-data-in-golang-using-gonumplot-5f1h
+	file, err := os.Open("data/house_prices.csv")
+	if err != nil {
+		log.Fatal(err)
 	}
+	defer file.Close()
+	reader := csv.NewReader(file)
+	if _, err := reader.Read(); err != nil {
+		log.Fatal(err)
+	}
+	data, err := reader.ReadAll()
+	if err != nil {
+		log.Fatal(err)
+	}
+	//fmt.Println(data)
+
+	for _, row := range data {
+		square, _ := strconv.ParseFloat(row[0], 64)
+		price, _ := strconv.ParseFloat(row[2], 64)
+		inputs = append(inputs, square)
+		labels = append(labels, price)
+		xys = append(xys, plotter.XY{X: square, Y: price})
+	}
+	// f := func(x float64) float64 { return 36*x - 1.75 }
+	// for i := 0; i < inputPoints; i++ {
+	// 	inputs = append(inputs, inputPointsMinX+(inputPointsMaxX-inputPointsMinX)*rand.Float64())
+	// 	labels = append(labels, f(inputs[i])+inputPointsRandY*(1-rand.Float64()*2))
+	// 	xys = append(xys, plotter.XY{X: inputs[i], Y: labels[i]})
+	// }
+
 	inputsScatter, _ := plotter.NewScatter(xys)
 
 	img := make(chan *image.RGBA, 1) // Have at most one image in the channel.
@@ -79,8 +106,8 @@ func main() {
 			if plotLoss {
 				render(Plot(lossLines))
 			} else {
-				const extra = (inputPointsMaxX - inputPointsMinX) / 10
-				xs := []float64{inputPointsMinX - extra, inputPointsMaxX + extra}
+				//const extra = (inputPointsMaxX - inputPointsMinX) / 10
+				xs := []float64{inputPointsMinX /*- extra*/, inputPointsMaxX /*+ extra*/}
 				ys := inference(xs, w, b)
 				resLine, _ := plotter.NewLine(plotter.XYs{{X: xs[0], Y: ys[0]}, {X: xs[1], Y: ys[1]}})
 				render(Plot(inputsScatter, resLine))
