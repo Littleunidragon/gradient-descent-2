@@ -71,7 +71,19 @@ func main() {
 	for _, row := range data {
 		square, _ := strconv.ParseFloat(row[0], 64)
 		price, _ := strconv.ParseFloat(row[2], 64)
-		inputs = append(inputs, square)
+		// house types and walls
+		if row[1] == "Duplex" {
+			inputs = append(inputs, square, 1)
+		} else if row[1] == "Detached" {
+			inputs = append(inputs, square, 2)
+		} else if row[1] == "Semi-Detached" {
+			inputs = append(inputs, square, 3)
+		} else if row[1] == "Townhouse" {
+			inputs = append(inputs, square, 4)
+		} else if row[1] == "Multi-family" {
+			inputs = append(inputs, square, 5)
+		}
+			
 		labels = append(labels, price)
 		xys = append(xys, plotter.XY{X: square, Y: price})
 	}
@@ -132,6 +144,16 @@ func main() {
 	}
 }
 
+func prediction(inputs [][]float64, wk, wb []float64) (res []float64) {
+	for _, x := range inputs {
+		// w = w*x + w2*x + w3*x + w4*x + w5*x + w6*x 
+		// b = w7*x + w8*x + w9*x + w10*x + w11*x + w12*x + b
+		// rewrite in more pretty way with for loop
+		res = append(res, w*x+b)
+	}
+	return res
+}
+
 func inference(inputs []float64, w, b float64) (res []float64) {
 	for _, x := range inputs {
 		res = append(res, w*x+b)
@@ -146,7 +168,7 @@ func msl(labels, y []float64) (loss float64) {
 	return loss / float64(len(labels))
 }
 
-func dmsl(inputs, labels, y []float64) (dw, db float64) {
+func dmsl(inputs, labels, y []float64) (dw, db float64) {// return dw []float64, db float64
 	for i := range labels {
 		diff := labels[i] - y[i]
 		dw += inputs[i] * diff
